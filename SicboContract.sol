@@ -1,4 +1,4 @@
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity >=0.7.2 <0.9.0;
 
 contract SicboContract {
     modifier onlyOwner {
@@ -28,6 +28,7 @@ contract SicboContract {
         uint8 dice1;
         uint8 dice2;
         uint8 dice3;
+        uint256 winMoney;
     }
 
     struct DataValid {
@@ -109,14 +110,14 @@ contract SicboContract {
     }
 
     function randomNum() private returns(uint8) {
-        return (uint8(uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty))))%10) + 1;
+        return (uint8(uint256(keccak256(abi.encodePacked(block.timestamp,block.difficulty,msg.sender))))%10) + 1;
     }
 
     function rollDice() internal returns(uint8) {
-        uint8 rs = 1;
-        do {
-            rs = randomNum();
-        } while(rs > 6);
+       uint8 rs = randomNum();
+        if(rs > 6) {
+            rs = rs / 2;
+        }
         return rs;
     }
 
@@ -164,7 +165,7 @@ contract SicboContract {
         return DataValid(totalPay, totalReceive);
     }
 
-    function countDice(uint8 num, uint8[] memory dices) private pure returns (uint8) {
+    function countDice(uint8 num, uint8[3] memory dices) private pure returns (uint8) {
         uint8 count = 0;
         for(uint8 i = 0; i < dices.length; i++) {
             if(num == dices[i]) {
@@ -174,7 +175,7 @@ contract SicboContract {
         return count;
     }
 
-    function playerWinner(Bet[] memory bets, uint8[] memory dices) internal returns(uint256) {
+    function playerWinner(Bet[] memory bets, uint8[3] memory dices) internal returns(uint256) {
         uint256 totalPay = 0;
         uint8 sumDice = 0;
          for(uint8 i = 0; i < dices.length; i++) {
@@ -182,8 +183,9 @@ contract SicboContract {
         }
         for(uint8 i = 0; i < bets.length; i++) {
             if(bets[i].methodBet == MethodBet.HILOW) {
-                if((4 >= sumDice && sumDice <= 10 && bets[i].betNumber == 0) 
-                    || (11 >= sumDice && sumDice <= 17 && bets[i].betNumber == 1) 
+                uint8 c = countDice(bets[i].betNumber, dices);
+                if(((sumDice >=4 && sumDice <= 10 && bets[i].betNumber == 0) 
+                    || (sumDice >= 11 && sumDice <= 17 && bets[i].betNumber == 1)) && c < 3
                 ) {
                     totalPay+= bets[i].betMoney * (award.hiLow + 1);
                 }                
@@ -224,7 +226,7 @@ contract SicboContract {
         uint8 dice1 = rollDice();
         uint8 dice2 = rollDice();
         uint8 dice3 = rollDice();
-        uint8[] memory dices;
+        uint8[3] memory dices;
         dices[0] = dice1;
         dices[1] = dice2;
         dices[2] = dice3;
@@ -232,7 +234,7 @@ contract SicboContract {
         if(totalPay > 0) {
             payable(msg.sender).transfer(totalPay);
         }
-        GameResult memory rs = GameResult(msg.sender, bets, dice1, dice2, dice3);
+        GameResult memory rs = GameResult(msg.sender, bets, dice1, dice2, dice3, totalPay);
         return rs;
     }
 }
