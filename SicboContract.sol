@@ -183,7 +183,7 @@ contract SicboContract {
         }
         for(uint8 i = 0; i < bets.length; i++) {
             if(bets[i].methodBet == MethodBet.HILOW) {
-                uint8 c = countDice(bets[i].betNumber, dices);
+                uint8 c = countDice(dices[1], dices);
                 if(((sumDice >=4 && sumDice <= 10 && bets[i].betNumber == 0) 
                     || (sumDice >= 11 && sumDice <= 17 && bets[i].betNumber == 1)) && c < 3
                 ) {
