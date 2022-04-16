@@ -31,6 +31,12 @@ contract SicboContract {
         uint256 winMoney;
     }
 
+    struct RollDiceResult {
+        uint8 dice1;
+        uint8 dice2;
+        uint8 dice3;
+    }
+
     struct DataValid {
         uint256 totalPay;
         uint256 totalReceive;
@@ -110,15 +116,27 @@ contract SicboContract {
     }
 
     function randomNum() private returns(uint8) {
-        return (uint8(uint256(keccak256(abi.encodePacked(block.timestamp,block.difficulty,msg.sender))))%10) + 1;
+        return (uint8(uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, msg.sender))))%100);
     }
 
-    function rollDice() internal returns(uint8) {
-       uint8 rs = randomNum();
-        if(rs > 6) {
-            rs = rs / 2;
+    function convertDiceNumber(uint8 num) private returns(uint8) {
+        uint8 rs = num + 1;
+        if((rs-1) == 6) {
+            rs = 6;
+        } else {
+            rs = rs/2 + rs%2;
         }
+
         return rs;
+    }
+
+    function rollDice() internal returns(RollDiceResult memory) {
+        uint8 rs = randomNum();
+        uint8 dice1 = rs/100;
+        uint8 dice2 = rs/10;
+        uint8 dice3 = rs%10;
+
+        return RollDiceResult(convertDiceNumber(dice1), convertDiceNumber(dice2), convertDiceNumber(dice3));
     }
 
     function checkRule(Bet[] memory bets) internal returns(DataValid memory) {
@@ -223,18 +241,16 @@ contract SicboContract {
 
     function placeABet(Bet[] memory bets) public payable returns(GameResult memory) {
         checkRule(bets);        
-        uint8 dice1 = rollDice();
-        uint8 dice2 = rollDice();
-        uint8 dice3 = rollDice();
+        RollDiceResult memory rollDiceResult = rollDice();
         uint8[3] memory dices;
-        dices[0] = dice1;
-        dices[1] = dice2;
-        dices[2] = dice3;
+        dices[0] = rollDiceResult.dice1;
+        dices[1] = rollDiceResult.dice2;
+        dices[2] = rollDiceResult.dice3;
         uint256 totalPay = playerWinner(bets, dices);
         if(totalPay > 0) {
             payable(msg.sender).transfer(totalPay);
         }
-        GameResult memory rs = GameResult(msg.sender, bets, dice1, dice2, dice3, totalPay);
+        GameResult memory rs = GameResult(msg.sender, bets, dices[0], dices[1], dices[2], totalPay);
         return rs;
     }
 }
